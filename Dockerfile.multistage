@@ -1,0 +1,61 @@
+# ============================================================
+#  JOUR 4 / 10 — Docker : Multi-stage Build
+#
+#  Problème :
+#    Image naive = code + outils de build + dépendances de dev
+#    → image lourde (~900MB), surface d'attaque large
+#
+#  Solution Multi-stage :
+#    Stage 1 (builder) → installe TOUT, compile
+#    Stage 2 (runtime) → copie UNIQUEMENT ce qui est nécessaire
+#    → image finale légère (~100MB), propre, sécurisée
+# ============================================================
+
+# ════════════════════════════════════════════════════════════
+#  STAGE 1 : BUILDER
+#  Installe les dépendances et compile ce qui est nécessaire
+# ════════════════════════════════════════════════════════════
+FROM python:3.11 AS builder
+
+WORKDIR /build
+
+# Copier les requirements
+COPY requirements_j4.txt .
+
+# Installer dans un dossier isolé (pas dans le système)
+# --prefix=/install → tout va dans /build/install
+RUN pip install --no-cache-dir \
+    --prefix=/build/install \
+    -r requirements_j4.txt
+
+# ════════════════════════════════════════════════════════════
+#  STAGE 2 : RUNTIME
+#  Image finale légère — uniquement ce qui est nécessaire
+# ════════════════════════════════════════════════════════════
+FROM python:3.11-slim AS runtime
+
+# Métadonnées
+LABEL maintainer="sung@email.com"
+LABEL description="Jour 4 — Multi-stage build optimisé"
+
+WORKDIR /app
+
+# Copier UNIQUEMENT les dépendances compilées du stage builder
+# On ne copie PAS pip, setuptools, wheels, cache...
+COPY --from=builder /build/install /usr/local
+
+# Copier le code de l'application
+COPY app_j4/ ./app_j4/
+
+# Créer un utilisateur non-root (sécurité)
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN mkdir -p /app/output && chown -R appuser:appuser /app
+
+# Basculer sur l'utilisateur non-root
+USER appuser
+
+# Variables d'environnement
+ENV PYTHONUNBUFFERED=1
+ENV OUTPUT_PATH=/app/output
+
+CMD ["python", "app_j4/etl_optimise.py"]

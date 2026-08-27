@@ -1,0 +1,28 @@
+# ============================================================
+#  JOUR 4 / 10 — Comparaison naive vs multi-stage
+# ============================================================
+version: '3.8'
+
+services:
+
+  # Image naive — pour comparer la taille
+  etl_naive:
+    build:
+      context: .
+      dockerfile: Dockerfile.naive
+    container_name: etl_naive_j4
+    volumes:
+      - ./output_naive:/app/output
+    profiles:
+      - compare    # lancé seulement avec --profile compare
+
+  # Image optimisée multi-stage
+  etl_optimise:
+    build:
+      context: .
+      dockerfile: Dockerfile.multistage
+    container_name: etl_optimise_j4
+    volumes:
+      - ./output_optimise:/app/output
+    environment:
+      OUTPUT_PATH: /app/output

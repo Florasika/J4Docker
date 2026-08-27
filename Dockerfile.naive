@@ -1,0 +1,14 @@
+# ============================================================
+#  DOCKERFILE NAIF — À NE PAS UTILISER EN PRODUCTION
+#  Gardé pour comparer la taille avec le multi-stage
+# ============================================================
+FROM python:3.11
+
+WORKDIR /app
+COPY requirements_j4.txt .
+RUN pip install -r requirements_j4.txt
+COPY app_j4/ ./app_j4/
+RUN mkdir -p /app/output
+
+ENV PYTHONUNBUFFERED=1
+CMD ["python", "app_j4/etl_optimise.py"]
